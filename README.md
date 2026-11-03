@@ -62,4 +62,3 @@ Se ha elegido este dataset porque permite trabajar con datos reales del sector d
 | `unidad_medida` | Unidad de medida | Texto |
 | `descuento` | Porcentaje de descuento, si existe | Decimal |
 | `fecha_extraccion` | Fecha de recopilación | Fecha |
-```eof
