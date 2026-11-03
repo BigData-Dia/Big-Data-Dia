@@ -63,5 +63,3 @@ Se ha elegido este dataset porque permite trabajar con datos reales del sector d
 | `descuento` | Porcentaje de descuento, si existe | Decimal |
 | `fecha_extraccion` | Fecha de recopilación | Fecha |
 ```eof
-
-He transformado la tabla en un formato nativo de Markdown y organizado los puntos en secciones claras. ¡Espero que este archivo te sea muy útil para documentar tu proyecto en plataformas como GitHub o GitLab! ¿Te gustaría añadir alguna sección adicional, como instrucciones de instalación o requisitos del sistema?
