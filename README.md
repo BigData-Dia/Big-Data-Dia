@@ -62,3 +62,24 @@ Se ha elegido este dataset porque permite trabajar con datos reales del sector d
 | `unidad_medida` | Unidad de medida | Texto |
 | `descuento` | Porcentaje de descuento, si existe | Decimal |
 | `fecha_extraccion` | Fecha de recopilación | Fecha |
+
+## Ingesta de datos (Tarea 2)
+
+Desde la raíz del repositorio, con Python 3.10 o superior:
+
+```powershell
+python -m pip install requests
+python scripts/ingest_dia.py
+```
+
+Cada ejecución crea un único archivo `data/raw/<fecha-hora-UTC>/captura_dia.json`.
+No crea carpetas por categoría ni un directorio `processed`.
+
+- `items`: todos los productos reunidos en una lista, sin limpiar ni eliminar repeticiones entre categorías.
+- `request_log`: URL, estado HTTP y cuerpo original de cada respuesta en `body_base64`, incluidos el menú y los intentos fallidos que recibieron respuesta. Se recuperan los bytes con `base64.b64decode(respuesta["body_base64"])`; para JSON, se pueden leer con `json.loads(...)`.
+- `categories`, `configuration`, fechas UTC, recuentos y errores: permiten revisar el alcance y repetir la captura.
+- `complete`: indica si se completó el alcance según los controles del script; no garantiza cubrir productos fuera de las categorías consultadas.
+
+La API se consulta por categorías principales y páginas, pero todo se conserva en el mismo archivo. Los cuerpos originales son los recibidos después de la descompresión de transporte de Requests. La lista `items` facilita su consulta; las respuestas completas permiten recuperar los originales sin perder campos ni metadatos.
+
+Opciones: `--raw-dir`, `--timeout`, `--pause`, `--retries`, `--max-pages` y `--menu-url`. Las rutas relativas se interpretan desde el directorio de ejecución. El script muestra un resumen y devuelve 0 si la captura es completa, 1 si es incompleta y 2 si falla el menú o la escritura. Cada captura usa una carpeta nueva y no sobrescribe ejecuciones anteriores.
