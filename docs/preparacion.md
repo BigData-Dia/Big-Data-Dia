@@ -56,4 +56,25 @@ Cada elemento de `origenes` contiene `archivo`, relativo al proyecto, y `ruta_js
 
 El [informe de diagnóstico](diagnostico.md) conserva las cifras del 10 y 16 de noviembre. El código está en [3_diagnostico.py](../scripts/3_diagnostico.py). Una captura nueva exige volver a ejecutar el diagnóstico antes de extender esas conclusiones.
 
+### Comprobaciones, resultados y conclusiones
+
+Resumen de las cifras obtenidas con pandas y documentadas en el informe de diagnóstico. **Alcance: capturas del 10 y 16 de noviembre de 2026; no incluye la del 23 de noviembre.** Una fila del diagnóstico representa una aparición producto-categoría. La lectura, la inspección de tipos y los primeros registros se realizan sobre los RAW, sin modificarlos.
+
+| Comprobación | Resultado | Conclusión |
+|---|---|---|
+| Estructura, tipos y muestra | 14.448 filas y 33 columnas: 7.233 filas del 10/11 y 7.215 del 16/11. Identificadores como texto, precios `float64` y fecha de captura UTC. El script muestra los primeros registros con `head()`. | Hay objetos y listas anidados que deben interpretarse antes de construir la salida. |
+| Valores ausentes | Marca ausente en 407 filas (2,8 %); sin ausencias en `object_id` ni `display_name`. | La marca requiere admitir valores desconocidos. La ausencia de información opcional no demuestra que no exista en la realidad. |
+| Filas repetidas | 0 filas completamente idénticas; 2.919 iguales si se excluye la categoría. | La presencia en varias categorías explica repeticiones de productos; no deben eliminarse categorías sin conservar su relación. |
+| Claves del diseño | `object_id` repetido 1.478 veces el 10/11 y 1.477 el 16/11: 5.755 y 5.738 productos únicos. Hay 11.493 pares únicos `(producto_id, captured_at)`; 0 repeticiones de `(producto_id, categoría)` dentro de cada captura. | La clave de salida no es única en el RAW por aparición. Debe consolidarse por producto dentro de cada captura, conservando categorías y procedencias. |
+| Categorías, unidades y formatos | 30 categorías, 8 unidades de precio de referencia y solo moneda EUR. Hay 204 marcas con espacios en los extremos. | Los formatos de marca y las unidades necesitan normalización justificada; los precios por distintas unidades no son directamente comparables. |
+| Rangos y coherencia de precios | Precio entre 0,15 y 69,00 €, sin ceros ni negativos; descuentos entre 0 y 40 %. Hay 16 discrepancias superiores al 20 % entre contenido del nombre y precio por unidad, correspondientes a 8 productos. | Ajax 1,2 L presenta una incoherencia interna confirmada: 2.241,67 €/L frente a unos 2,24 €/L calculados con 2,69 €/1,2 L. Los otros 7 productos requieren investigación; no se corrigen automáticamente. |
+| Consistencia entre apariciones | Nombre, marca y precios coinciden para cada producto y captura; el stock difiere en 35 casos. | Las diferencias de stock necesitan revisión antes de consolidar ese campo. |
+| Cobertura y comparación temporal | 2 fechas; 28 de 30 categorías completas en cada captura. Hay 5.705 productos comunes, 50 solo en la primera y 33 solo en la segunda. Cambian de precio 524 productos comunes (282 suben y 242 bajan). | La cobertura es incompleta: no se pueden interpretar las apariciones y desapariciones como altas o bajas reales ni deducir tendencias con dos fechas. |
+
+### Principales problemas y dudas
+
+1. **Incoherencia confirmada:** el precio por litro de Ajax no concuerda con su precio y contenido declarado; el valor real requiere contrastar la fuente. Otros 7 productos con discrepancias necesitan investigación.
+2. **Limitación confirmada de la clave RAW:** el identificador se repite por pertenecer a varias categorías. La salida prevista exige consolidar por producto y captura y conservar todas las procedencias.
+3. **Cobertura pendiente de aclarar:** dos categorías figuran incompletas en ambas capturas. Las 50 desapariciones y 33 apariciones pueden deberse a diferencias de captura, no necesariamente a cambios reales del catálogo.
+
 [Recopilación](recopilacion.md) · [Diagnóstico](diagnostico.md) · [Inicio](../README.md)
