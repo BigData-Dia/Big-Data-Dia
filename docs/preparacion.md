@@ -16,23 +16,37 @@ El diseño exige `producto_id`, `nombre`, `captured_at`, `categorias` y `origene
 
 ### Diccionario de la salida actual
 
-| Campos | Tipo y significado |
-|---|---|
-| `producto_id`, `nombre`, `imagen_url` | Texto; identificador completo, nombre y URL absoluta de imagen. |
-| `categorias` | Lista de nombres de categorías sin repeticiones. |
-| `cantidad_contenidos`, `tamano_unidad`, `unidad_contenido` | Número de unidades del pack y tamaño individual en kg, l, m o unidad. Un pack 6 x 330 ml se representa como 6, 0.33, l. Se extraen del nombre; nulo si no se reconoce el formato. |
-| `precio_por_unidad_centimos` | Entero: precio publicado del pack dividido por cantidad_contenidos, redondeado al céntimo. No equivale al precio por kg/l. |
-| `precio_centimos` | Entero: precio publicado del producto o pack completo; puede ser precio Club. |
-| `precio_anterior_centimos` | Entero: precio tachado original; no garantiza un precio normal vigente. |
-| `precio_referencia_centimos`, `unidad_precio_referencia` | Precio por kg/l/unidad publicado por la fuente y su unidad. |
-| `es_promo`, `es_promo_club_dia` | Booleanos: oferta general y oferta Club, respectivamente. Se consultan tanto los indicadores de precio como la lista de promociones. Nulo si no se conoce. |
-| `precio_promo_centimos`, `precio_club_centimos` | Enteros: precio publicado cuando la fuente lo marca como precio promocional general o Club. No se calculan precios individuales a partir de 2x1/3x2 u ofertas por lote. |
-| `tipo_promo`, `tipo_promo_club` | Texto: 2x1, 3x2, descuento_porcentaje, descuento_unidad, precio_fijo, precio_por_lote u otra. Nulo si hay varios tipos o no se conoce. |
-| `descripcion_promo`, `descripcion_promo_club` | Texto original de las condiciones, separado por ámbito. |
-| `descuento_porcentaje`, `descuento_porcentaje_club` | Número: porcentaje explícito en la descripción. No supone que se aplique a todo el producto; consultar tipo y condiciones. |
-| `promociones` | Lista completa: código, descripción, tipo, solo_club_dia, exclusiva_online, URL, porcentaje, unidad descontada, unidades requeridas/pagadas e importe en céntimos cuando es explícito. Permite conservar varias ofertas simultáneas. |
-| `captured_at`, `moneda`, `origenes` | Fecha original de captura, moneda y procedencias de todas las apariciones consolidadas. |
-| `marca`, `supermercado`, `envase` | Texto: marca recortada, valor `DIA` y envase reconocido en el nombre. `marca` puede ser nulo; `envase` se omite cuando no se reconoce. |
+| Campo | Tipo | Obligatorio | Descripción |
+|---|---|---|---|
+| `producto_id` | Texto | Sí | Identificador completo, incluidos los sufijos de pack. |
+| `nombre` | Texto | Sí | Nombre comercial del producto. |
+| `imagen_url` | Texto (URL) | No | URL absoluta de la imagen. |
+| `categorias` | Lista de textos | Sí | Nombres de categorías sin repeticiones. |
+| `cantidad_contenidos` | Entero | No | Número de unidades del pack; nulo si no se reconoce. |
+| `tamano_unidad` | Decimal | No | Tamaño individual en la unidad indicada; por ejemplo, 0.33 para 330 ml expresados en litros. |
+| `unidad_contenido` | Texto | No | Unidad del tamaño individual: kg, l, m o unidad. |
+| `precio_por_unidad_centimos` | Entero | No | Precio publicado del pack dividido por la cantidad de contenidos, redondeado al céntimo; no equivale al precio por kg/l. |
+| `precio_centimos` | Entero | No | Precio publicado del producto o pack completo; puede ser precio Club. |
+| `precio_anterior_centimos` | Entero | No | Precio tachado original; no garantiza un precio normal vigente. |
+| `precio_referencia_centimos` | Entero | No | Precio por unidad de referencia publicado, expresado en céntimos. |
+| `unidad_precio_referencia` | Texto | No | Unidad del precio de referencia: KILO, LITRO u otra indicada por DIA. |
+| `es_promo` | Booleano | No | Indica una oferta general; nulo si no se conoce. |
+| `es_promo_club_dia` | Booleano | No | Indica una oferta Club DIA; nulo si no se conoce. |
+| `precio_promo_centimos` | Entero | No | Precio marcado como promocional general; no se calcula a partir de ofertas por varias unidades. |
+| `precio_club_centimos` | Entero | No | Precio marcado como Club DIA; no se calcula a partir de ofertas por varias unidades. |
+| `tipo_promo` | Texto | No | Tipo de oferta general: 2x1, 3x2, descuento_porcentaje, descuento_unidad, precio_fijo, precio_por_lote u otra. Nulo si no hay un único tipo conocido. |
+| `tipo_promo_club` | Texto | No | Tipo de oferta Club DIA, con las mismas categorías que la oferta general. |
+| `descripcion_promo` | Texto | No | Condiciones originales de las ofertas generales. |
+| `descripcion_promo_club` | Texto | No | Condiciones originales de las ofertas Club DIA. |
+| `descuento_porcentaje` | Decimal | No | Porcentaje explícito de la oferta general; consultar las condiciones para saber a qué unidad se aplica. |
+| `descuento_porcentaje_club` | Decimal | No | Porcentaje explícito de la oferta Club DIA; consultar las condiciones de aplicación. |
+| `promociones` | Lista de objetos | No | Ofertas con código, descripción, tipo, ámbito Club/online, URL, porcentaje, unidad descontada, unidades requeridas/pagadas e importe cuando se conocen. Lista vacía si no se incluyen ofertas. |
+| `captured_at` | Texto (fecha y hora ISO 8601 UTC) | Sí | Instante original de la captura. |
+| `moneda` | Texto | No | Código de moneda del precio publicado. |
+| `origenes` | Lista de objetos | Sí | Apariciones originales; cada objeto exige `archivo` y `ruta_json`, ambos de tipo texto. |
+| `marca` | Texto | No | Marca con los espacios de los extremos eliminados; puede ser nula. |
+| `supermercado` | Texto | No | Valor fijo DIA. |
+| `envase` | Texto | No | Envase reconocido en el nombre; se omite cuando no se reconoce. |
 
 ### Trazabilidad
 
