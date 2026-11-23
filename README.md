@@ -4,6 +4,8 @@ Proyecto de recopilación y análisis de información del catálogo online de DI
 
 [Documentación de recopilación del dataset](docs/recopilacion.md)
 
+[Documentación de preparación y diagnóstico de los datos](docs/preparacion.md)
+
 ## 1. Fuente de los Datos
 * **Entidad:** Supermercados DIA.
 * **Web oficial:** [https://www.dia.es/](https://www.dia.es/)
