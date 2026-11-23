@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
+from promociones import extraer_promociones
+
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 UNIT_CONVERSIONS = {
@@ -104,6 +106,7 @@ def transform_product(item: dict[str, Any], category: str) -> dict[str, Any]:
         'unidad_contenido': unit,
         'tamano_unidad': size,
     })
+    product.update(extraer_promociones(item))
     return product
 
 
@@ -113,21 +116,41 @@ def transform_dataset(data: dict[str, Any]) -> list[dict[str, Any]]:
     Cuando aparece en varias categorías, usa los datos de su primera aparición.
     """
     products = {}
-    for category in data['categories']:
+    promotion_sources = {}
+    for category_index, category in enumerate(data['categories']):
         category_name = category.get('name') or category['id']
-        for item in category['items']:
+        for item_index, item in enumerate(category['items']):
             product = transform_product(item, category_name)
+            product['captured_at'] = data.get('captured_at')
+            product['origenes'] = [{
+                'ruta_json': f'/categories/{category_index}/items/{item_index}',
+            }]
             product_id = product['producto_id']
             if product_id not in products:
                 products[product_id] = product
+                promotion_sources[product_id] = {
+                    'prices': item.get('prices'),
+                    'promotions': list(item.get('promotions') or []),
+                }
             elif category_name not in products[product_id]['categorias']:
                 products[product_id]['categorias'].append(category_name)
+            if products[product_id] is not product:
+                products[product_id]['origenes'].extend(product['origenes'])
+                combined = promotion_sources[product_id]
+                for promotion in item.get('promotions') or []:
+                    if promotion not in combined['promotions']:
+                        combined['promotions'].append(promotion)
+                products[product_id].update(extraer_promociones(combined))
     return list(products.values())
 
 
 def transform_file(source: Path) -> Path:
     with source.open(encoding='utf-8') as file:
         products = transform_dataset(json.load(file))
+
+    for product in products:
+        for origin in product['origenes']:
+            origin['archivo'] = f'data/raw/{source.parent.name}/{source.name}'
 
     destination = DATA_DIR / 'processed' / source.parent.name / 'productos_dia.json'
     destination.parent.mkdir(parents=True, exist_ok=True)
