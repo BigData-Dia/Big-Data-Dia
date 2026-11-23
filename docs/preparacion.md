@@ -1,31 +1,29 @@
 # Preparación de los datos
 
-## Diagnóstico de los datos originales (Tarea 3.2)
+## Diseño de las tablas (Tarea 3.1)
 
-**Código:** [`scripts/3_diagnostico.py`](../scripts/3_diagnostico.py). Se ejecuta con `python scripts/3_diagnostico.py` (requiere `pandas`). Lee las capturas de `data/raw/<captura>/productos_dia.json` con `pd.json_normalize` (una fila por aparición de un producto en una categoría, con los campos de `prices` aplanados) y solo muestra resultados por pantalla: **no modifica los archivos originales**.
+**Pregunta.** ¿Cuántos productos de DIA subieron, bajaron o mantuvieron su precio de venta entre las capturas del 10 y del 16 de noviembre de 2026? Para responderla hacen falta el identificador del producto (`object_id`), la fecha y hora de captura (`captured_at`), el precio de venta (`prices.price`) y su moneda (`prices.currency`). Se compararán los productos presentes en ambas capturas. El nombre permitirá identificar los productos en los resultados y la categoría se conservará como relación aparte.
 
-**Datos analizados:** 2 capturas, 10/11/2026 (7.233 filas) y 16/11/2026 (7.215 filas). En total, 14.448 filas y 33 columnas. La carpeta `data/raw/2026-11-05_183209_666157/` está vacía y no se ha usado.
-
-**Claves revisadas (Tarea 3.1):** `producto_id` (desde `object_id`) para la tabla de productos, `(producto_id, categoría)` para la relación producto-categoría y `(producto_id, captured_at)` para el histórico de precios.
-
-| Comprobación | Resultado (pandas) | Conclusión |
+| Tabla | Qué representa cada fila | Clave candidata y qué identifica |
 |---|---|---|
-| Estructura y tipos | 14.448 × 33. `object_id` es texto, los precios son `float64`, `units_in_stock` es `int64` y `captured_at` es una fecha UTC. `promotions`, `allergens` y `product_info` son listas u objetos anidados. | Los tipos son adecuados. Los campos anidados necesitan un tratamiento aparte. |
-| Valores ausentes | `brand` falta en 407 filas (2,8 %). `allergens` falta en el 77,3 %, `stamp_*` en el 80,3 %, `promotions`/`headband_promotion` en el 95,4 % y `average_weight`/`weight_in_grams` en el 98,1 %. Los campos clave (`object_id`, `display_name` y `prices.*`) no tienen ausentes. | Son campos opcionales: su ausencia significa "no aplica" (sin promoción o sin sello), no un error. Falta decidir cómo tratar los productos sin marca. |
-| Filas repetidas | 0 filas idénticas. 2.919 filas son iguales salvo en la categoría. | No hay duplicados exactos. Las repeticiones se deben a la presencia de un mismo producto en varias categorías. |
-| Clave `producto_id` | `object_id` coincide siempre con `sku_id`. Se repite 1.478 veces en la captura del 10/11 (5.755 únicos) y 1.477 en la del 16/11 (5.738 únicos). Hay productos en hasta 5 categorías; las que más repeticiones aportan son *Navidad* (905) y *Novedades* (661). | **No es única por fila**: hay que deduplicar por `object_id` y pasar las categorías a una tabla producto-categoría. |
-| Clave `(producto_id, categoría)` | 0 repetidos en ambas capturas. | Es válida como clave de la relación. |
-| Clave `(producto_id, captured_at)` | 11.493 observaciones únicas. Nombre, marca, `price` y `price_per_unit` son iguales en todas las apariciones de un producto, pero `units_in_stock` varía en 35 casos (por ejemplo, 47 frente a 46). | Es válida para precios. El stock no es fiable a nivel de producto. |
-| `object_id` no numéricos | 230 filas (224 productos únicos) con sufijo `P2`…`P24`, como `504P6` = "Leche … pack 6 x 1 L". Su id base existe en los 224 casos. | Son packs del producto base. Hay que decidir si se tratan como productos distintos o se relacionan con el producto base. |
-| Categorías | 30 ids y 30 nombres. *Novedades y recomendados* y *Cabello y belleza* aparecen con `complete=false` en las dos capturas. | Hay que tener en cuenta la cobertura incompleta al contar productos por categoría. |
-| Valores categóricos | `currency`: solo `EUR`. `measure_unit` tiene 8 valores: KILO (9.252), LITRO (3.009), UNIDAD (1.134), `100 ML.` (879), LAVADO (87), `100 GR.` (53), DOCENA (22) y METRO (12). Hay 962 marcas: 204 filas tienen espacios sobrantes (`"Dia Dulce Noel "`) y 2 marcas solo se diferencian en las mayúsculas (`Dr. Oetker`/`Dr. oetker` y `El Águila`/`El águila`). | Para comparar `price_per_unit` hay que normalizar las unidades (100 ML → LITRO y 100 GR → KILO) y limpiar las marcas con `strip` y la normalización de mayúsculas. |
-| Rangos de precios | `price` está entre 0,15 y 69,00 €, sin ceros ni negativos. `discount_percentage` está entre 0 y 40, y coincide con `price`/`strikethrough_price` en todos los casos (±2 pp). `strikethrough_price` es igual a `price` cuando no hay promoción (11.230 casos de producto y captura). `price_per_unit` llega a 6.875 €. | Los precios son coherentes, salvo los casos de la fila siguiente. |
-| Coherencia `price_per_unit` | Se compara la cantidad del nombre con `price / price_per_unit` en 9.417 productos KILO/LITRO. Hay 16 discrepancias (>20 %), que corresponden a 8 productos en las dos capturas. Entre ellas: **Ajax 1,2 L (157027): 2,69 € → 2.241,67 €/L** (el valor correcto es ≈2,24 €/L, 1.000 veces menor). También *Paté La Piara 2 x 75 g* (3,33 €/kg frente a ≈6,67) y *Melocotón Fruticampo 240 g* (3,45 €/kg frente a ≈6,04). El azafrán (6.875 €/kg, 0,4 g) y los ambientadores de 4 ml (462,50 €/L) sí son correctos. | El caso de Ajax es un **error confirmado**. Los demás necesitan **investigación**: puede haber pesos escurridos o nombres con "93 g + 35 g". |
-| Campos constantes | `weight`, `expiration_days` y `units_in_cart` valen 0 en todas las filas. `units_in_stock = 0` en 684 casos de producto y captura. | Los tres primeros campos no aportan información y se pueden descartar. El peso hay que extraerlo de `display_name`. |
-| Cobertura temporal | Cada captura tiene un único `captured_at` (10/11 19:54 UTC y 16/11 18:21 UTC). Hay 5.705 productos comunes, 50 que solo están en la primera captura y 33 que solo están en la segunda. 524 productos comunes (9,2 %) cambian de `price`: 282 suben y 242 bajan. | Solo hay 2 fechas: sirven para probar la carga incremental, pero no para analizar tendencias. |
+| `productos` | Un producto observado en alguna captura. | `producto_id` identifica un artículo del catálogo. Se conserva el identificador completo, incluidos los sufijos de pack. |
+| `producto_categoria` | Una pertenencia a una categoría observada al menos una vez en las capturas. | `(producto_id, categoria_id)` identifica la relación entre un producto y una categoría, aunque aparezca en varias capturas. |
+| `historico_precios` | El precio de venta de un producto en un instante de captura. | `(producto_id, captured_at)` identifica una observación de precio. Si dos apariciones con esa clave discrepan en precio o moneda, se registrará el conflicto antes de consolidarlas. |
 
-### Principales problemas y dudas
+| Tabla | Columna | Tipo | Obligatoria | Descripción |
+|---|---|---|---|---|
+| `productos` | `producto_id` | Texto | Sí | Identificador original `object_id`. |
+| `productos` | `nombre` | Texto | Sí | Nombre comercial (`display_name`) de la aparición más reciente con nombre. |
+| `producto_categoria` | `producto_id` | Texto | Sí | Referencia al producto. |
+| `producto_categoria` | `categoria_id` | Texto | Sí | Identificador de la categoría (`categories[].id`). |
+| `historico_precios` | `producto_id` | Texto | Sí | Referencia al producto. |
+| `historico_precios` | `captured_at` | Fecha y hora UTC | Sí | Instante de la captura indicado en el JSON. |
+| `historico_precios` | `precio_eur` | Decimal con dos decimales | Sí | Precio de venta del artículo en euros. |
+| `historico_precios` | `moneda` | Texto | Sí | Código de moneda del precio original. Para esta comparación se exige `EUR`. |
+| Todas | `origenes` | Lista de objetos | Sí | Referencias a las apariciones originales que respaldan la fila. Cada objeto contiene `archivo` (texto) y `ruta_json` (texto), ambos obligatorios. |
 
-1. **Error confirmado: `price_per_unit` mal escalado.** El producto 157027 (Ajax 1,2 L) tiene 2.241,67 €/L en las dos capturas, cuando debería tener unos 2,24 €/L. Distorsiona cualquier media de `price_per_unit` de *Limpieza y hogar* (la desviación típica global es 86,80 frente a una media de 12,18). Hay otros 7 productos con discrepancias >20 % entre el nombre y el precio por unidad que **necesitan investigación** antes de corregirlos.
-2. **Error confirmado de clave: `object_id` no es único por fila.** Hay 1.478 y 1.477 repeticiones por captura, debidas a productos que están en 2–5 categorías. Los datos del producto coinciden entre apariciones, salvo `units_in_stock`, que cambia en 35 casos. Por eso se usa `(producto_id, categoría)` como clave de la relación y se deduplica por `object_id`.
-3. **Dudas que hay que investigar:** los 224 productos con sufijo `P<n>` (packs) cuyo id base también existe, las 8 unidades de `measure_unit` que hay que homogeneizar y la cobertura incompleta de 2 categorías (`complete=false` en ambas capturas). Esta cobertura afecta a la comparación entre fechas: hay 50 productos que desaparecen y 33 que aparecen, pero no se puede saber si son altas y bajas reales o si no se descargaron.
+**Trazabilidad.** Antes de aplanar el JSON se guardará la ruta del archivo relativa al repositorio (`data/raw/<captura>/productos_dia.json`) y la posición del elemento dentro de él (`/categories/2/items/15`, con índices desde cero). Esa posición identifica el registro original. Al agrupar apariciones se conservarán sus referencias en `origenes`.
+
+**Transformaciones previstas.** Aplanar las listas de productos de cada categoría, conservar los identificadores como texto, recortar espacios del nombre y convertir `captured_at` a fecha y hora UTC. Leer `prices.price` como decimal, validar `EUR` y conservar el importe sin dividirlo por 100 porque el archivo ya lo expresa en euros. Separar productos, pertenencias y precios, y consolidar las apariciones por sus claves. Para responder la pregunta, emparejar los precios por `producto_id` entre ambas capturas y clasificar el signo de la diferencia.
+
+[Diagnóstico de los datos originales (Tarea 3.2)](diagnostico.md)
