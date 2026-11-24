@@ -1,138 +1,65 @@
 # Preparación de los datos
 
-## 1. Entender (Tarea 3.1.)
+## 1. Entender (Tarea 3.1)
 
-Antes de modificar los datos, definimos la pregunta de investigación, el significado de los registros y la estructura que queremos obtener. Así podemos determinar qué información necesitamos y qué condiciones deben cumplir los datos preparados.
+**Pregunta:** ¿cómo cambian los precios, formatos y promociones de los productos de DIA entre capturas?
 
-### 1.1. Conceptos que debemos definir
+**Datos necesarios:** identificador, nombre, marca y categorías de cada producto; su formato (contenido y envase), precios y promociones, y la fecha de cada captura.
 
-| Concepto | Qué significa en nuestro proyecto |
+### 1.1. Decisiones
+
+| Concepto | Nuestro proyecto |
 |---|---|
-| Unidad de observación | Un producto del catálogo de DIA en una captura determinada. |
-| Clave candidata | Combinación de campos que permite identificar de forma única un producto dentro de una captura. |
-| Esquema de salida | Campos, tipos de datos, unidades y campos obligatorios de los productos preparados. |
-| Alcance | Catálogo online de DIA recopilado en distintas fechas, incluyendo sus categorías, productos, precios y promociones. |
-| Trazabilidad | Forma de localizar el archivo y la posición del registro original del que procede cada producto preparado. |
+| Unidad de observación | Una fila por producto y captura. En el RAW cada registro es la aparición de un producto en una categoría. |
+| Clave candidata | `producto_id + fecha_captura`: identifica un producto en una captura concreta.<br>**Limitaciones:** en el RAW `object_id` se repite cuando el producto está en varias categorías, por lo que la clave solo es única tras consolidar. Los packs tienen id propio (`504P6` frente a `504`) y se tratan como productos distintos. |
+| Esquema de salida | Tabla `productos_dia` (apartado 1.2). |
+| Alcance | **Fuente:** API del catálogo online de DIA.<br>**Periodo:** capturas del 10/11/2026 (`data/raw/20261110T194612.279326Z/`) y del 23/11/2026 (`data/raw/20261123T184952.650445Z/`).<br>**Filtros:** ninguno.<br>**Población:** productos de la tienda online de DIA en España. |
+| Trazabilidad | Columna `origenes`: lista con `archivo` (ruta relativa del RAW, incluye la captura) y `ruta_json` (posición del registro, índices desde cero; p. ej. `/categories/2/items/15`). Es una lista porque un producto consolidado procede de varias apariciones. |
 
-### 1.2. Nuestros datos originales
+### 1.2. Tabla de salida: `productos_dia`
 
-Hemos recopilado información del catálogo online de Supermercados DIA mediante su API y guardado las capturas originales en `data/raw/`.
-
-Los datos están organizados en formato JSON. Cada captura contiene distintas categorías y, dentro de ellas, los productos correspondientes.
-
-| Elemento | Descripción |
-|---|---|
-| Fuente | API del catálogo online de Supermercados DIA. |
-| Formato | JSON. |
-| Estructura | Categorías que contienen listas de productos (`items`). |
-| Identificador original | `object_id`. |
-| Nombre original | `display_name`. |
-| Información de precios | Precios publicados, precios anteriores y precios de referencia. |
-| Información de promociones | Ofertas generales, promociones Club DIA y condiciones de las ofertas por varias unidades. |
-| Fechas de recopilación | 10, 16 y 23 de noviembre de 2026. |
-| Ubicación | `data/raw/`. |
-
-Cada producto puede aparecer asociado a una o varias categorías. Por este motivo, un mismo identificador puede repetirse en los datos originales.
-
-Las capturas corresponden a momentos diferentes. Esto nos permitirá comparar los productos que aparecen en varias fechas y estudiar los cambios de precios, formatos y promociones.
-
-### 1.3. Diseñamos el resultado esperado
-
-| Decisión | Nuestro proyecto |
-|---|---|
-| Pregunta | ¿Cómo cambian los precios, formatos y promociones de los productos de DIA entre capturas? |
-| Objetivo | Comparar productos comunes entre distintas fechas y estudiar las diferencias en sus precios y promociones. |
-| Unidad de observación | Una fila por producto y captura. |
-| Clave candidata | `producto_id + fecha_captura`. |
-| Tabla de salida | `productos_dia`. |
-| Campos principales | Identificador, nombre, marca, categorías, formato, precios y promociones. |
-| Procedencia | Archivo RAW original y ruta del registro dentro del JSON. |
-
-La clave candidata `producto_id + fecha_captura` permite identificar un producto en una captura concreta, siempre que cada producto se consolide en una única fila por captura.
-
-El identificador del producto se conservará completo, incluidos los sufijos correspondientes a los formatos o packs.
-
-Como un producto puede aparecer en varias categorías, estas se conservarán en una lista sin repeticiones. También se mantendrán todas sus referencias de origen.
-
-**Nota sobre la fecha de captura:** `fecha_captura` es un dato necesario para comparar las recopilaciones. No se considera un campo original proporcionado por DIA. Se incorporará a partir de la información de la propia captura o de su registro de recopilación, y se conservará en los datos preparados.
-
-### 1.4. Definimos las columnas de salida
-
-La tabla principal `productos_dia` contendrá una fila por producto y captura.
+Los campos opcionales quedan nulos cuando el dato no está disponible o no se reconoce.
 
 | Columna | Tipo | Obligatoria | Descripción |
 |---|---|---|---|
-| `producto_id` | Texto | Sí | Identificador completo del producto, incluidos los sufijos de pack. |
-| `nombre` | Texto | Sí | Nombre comercial del producto. |
-| `imagen_url` | Texto (URL) | No | Dirección de la imagen del producto. |
-| `categorias` | Lista de textos | Sí | Categorías a las que pertenece el producto, sin repeticiones. |
-| `cantidad_contenidos` | Entero | No | Número de unidades que contiene el pack; nulo si no se reconoce. |
-| `tamano_unidad` | Decimal | No | Tamaño de cada unidad, expresado en la unidad correspondiente. |
-| `unidad_contenido` | Texto | No | Unidad del contenido: kg, l, m o unidad. |
-| `precio_por_unidad_centimos` | Entero | No | Precio publicado del pack dividido entre el número de contenidos, redondeado al céntimo. No equivale al precio por kg o litro. |
-| `precio_centimos` | Entero | No | Precio publicado del producto o pack completo; puede corresponder al precio Club. |
-| `precio_anterior_centimos` | Entero | No | Precio tachado original; no garantiza que sea el precio habitual vigente. |
-| `precio_referencia_centimos` | Entero | No | Precio por unidad de referencia publicado por DIA, expresado en céntimos. |
-| `unidad_precio_referencia` | Texto | No | Unidad del precio de referencia: KILO, LITRO u otra indicada por DIA. |
-| `es_promo` | Booleano | No | Indica si el producto tiene una oferta general; nulo si no se conoce. |
-| `es_promo_club_dia` | Booleano | No | Indica si el producto tiene una oferta Club DIA; nulo si no se conoce. |
-| `precio_promo_centimos` | Entero | No | Precio marcado como promocional general. No se calcula a partir de ofertas por varias unidades. |
-| `precio_club_centimos` | Entero | No | Precio marcado como Club DIA. No se calcula a partir de ofertas por varias unidades. |
-| `tipo_promo` | Texto | No | Tipo de oferta general: 2x1, 3x2, descuento_porcentaje, descuento_unidad, precio_fijo, precio_por_lote u otra. |
-| `tipo_promo_club` | Texto | No | Tipo de oferta Club DIA, con las mismas categorías que la oferta general. |
-| `descripcion_promo` | Texto | No | Condiciones originales de las ofertas generales. |
-| `descripcion_promo_club` | Texto | No | Condiciones originales de las ofertas Club DIA. |
-| `descuento_porcentaje` | Decimal | No | Porcentaje explícito de descuento de la oferta general. |
-| `descuento_porcentaje_club` | Decimal | No | Porcentaje explícito de descuento de la oferta Club DIA. |
-| `promociones` | Lista de objetos | No | Información detallada de las ofertas: código, descripción, tipo, ámbito, URL, porcentaje, unidades e importes cuando se conocen. |
-| `fecha_captura` | Fecha y hora | Sí | Momento en que se recopiló el catálogo. Se incorpora a partir de la información de la captura, no es un campo original de DIA. |
-| `moneda` | Texto | No | Código de la moneda del precio publicado. |
-| `origenes` | Lista de objetos | Sí | Referencias a las apariciones originales del producto. Cada objeto contiene el archivo y la ruta JSON. |
-| `marca` | Texto | No | Marca del producto, eliminando los espacios sobrantes de los extremos. |
-| `supermercado` | Texto | No | Supermercado al que pertenece el catálogo. En este proyecto, DIA. |
-| `envase` | Texto | No | Tipo de envase reconocido en el nombre del producto; se omite si no se reconoce. |
-
-Los campos opcionales podrán contener valores nulos cuando la información no esté disponible o no pueda reconocerse. Esto no significa necesariamente que el producto carezca de esa característica.
-
-Las categorías, promociones y procedencias se mantienen como listas de datos relacionados para evitar multiplicar las filas de productos.
-
-### Diccionario de la salida actual
-
-| Campo | Tipo | Obligatorio | Descripción |
-|---|---|---|---|
 | `producto_id` | Texto | Sí | Identificador completo, incluidos los sufijos de pack. |
-| `nombre` | Texto | Sí | Nombre comercial del producto. |
-| `imagen_url` | Texto (URL) | No | URL absoluta de la imagen. |
-| `categorias` | Lista de textos | Sí | Nombres de categorías sin repeticiones. |
-| `cantidad_contenidos` | Entero | No | Número de unidades del pack; nulo si no se reconoce. |
-| `tamano_unidad` | Decimal | No | Tamaño individual en la unidad indicada; por ejemplo, 0.33 para 330 ml expresados en litros. |
-| `unidad_contenido` | Texto | No | Unidad del tamaño individual: kg, l, m o unidad. |
-| `precio_por_unidad_centimos` | Entero | No | Precio publicado del pack dividido por la cantidad de contenidos, redondeado al céntimo; no equivale al precio por kg/l. |
-| `precio_centimos` | Entero | No | Precio publicado del producto o pack completo; puede ser precio Club. |
-| `precio_anterior_centimos` | Entero | No | Precio tachado original; no garantiza un precio normal vigente. |
-| `precio_referencia_centimos` | Entero | No | Precio por unidad de referencia publicado, expresado en céntimos. |
-| `unidad_precio_referencia` | Texto | No | Unidad del precio de referencia: KILO, LITRO u otra indicada por DIA. |
-| `es_promo` | Booleano | No | Indica una oferta general; nulo si no se conoce. |
-| `es_promo_club_dia` | Booleano | No | Indica una oferta Club DIA; nulo si no se conoce. |
-| `precio_promo_centimos` | Entero | No | Precio marcado como promocional general; no se calcula a partir de ofertas por varias unidades. |
-| `precio_club_centimos` | Entero | No | Precio marcado como Club DIA; no se calcula a partir de ofertas por varias unidades. |
-| `tipo_promo` | Texto | No | Tipo de oferta general: 2x1, 3x2, descuento_porcentaje, descuento_unidad, precio_fijo, precio_por_lote u otra. Nulo si no hay un único tipo conocido. |
-| `tipo_promo_club` | Texto | No | Tipo de oferta Club DIA, con las mismas categorías que la oferta general. |
-| `descripcion_promo` | Texto | No | Condiciones originales de las ofertas generales. |
-| `descripcion_promo_club` | Texto | No | Condiciones originales de las ofertas Club DIA. |
-| `descuento_porcentaje` | Decimal | No | Porcentaje explícito de la oferta general; consultar las condiciones para saber a qué unidad se aplica. |
-| `descuento_porcentaje_club` | Decimal | No | Porcentaje explícito de la oferta Club DIA; consultar las condiciones de aplicación. |
-| `promociones` | Lista de objetos | No | Ofertas con código, descripción, tipo, ámbito Club/online, URL, porcentaje, unidad descontada, unidades requeridas/pagadas e importe cuando se conocen. Lista vacía si no se incluyen ofertas. |
-| `captured_at` | Texto (fecha y hora ISO 8601 UTC) | Sí | Instante original de la captura. |
-| `moneda` | Texto | No | Código de moneda del precio publicado. |
-| `origenes` | Lista de objetos | Sí | Apariciones originales; cada objeto exige `archivo` y `ruta_json`, ambos de tipo texto. |
-| `marca` | Texto | No | Marca con los espacios de los extremos eliminados; puede ser nula. |
-| `supermercado` | Texto | No | Valor fijo DIA. |
-| `envase` | Texto | No | Envase reconocido en el nombre; se omite cuando no se reconoce. |
+| `fecha_captura` | Fecha y hora (UTC) | Sí | Momento de la captura, tomado de `captured_at` del JSON. |
+| `nombre` | Texto | Sí | Nombre comercial. |
+| `marca` | Texto | No | Marca limpia y unificada. |
+| `categorias` | Lista de textos | Sí | Categorías del producto, sin repeticiones. |
+| `cantidad_contenidos` | Entero | No | Unidades del pack. |
+| `tamano_unidad` | Decimal | No | Tamaño de cada unidad (p. ej. 0.33 para 330 ml). |
+| `unidad_contenido` | Texto | No | kg, l, m o unidad. |
+| `envase` | Texto | No | Envase reconocido en el nombre (botella, lata, brik…). |
+| `precio_centimos` | Entero | No | Precio publicado del producto o pack; puede ser precio Club. |
+| `precio_por_unidad_centimos` | Entero | No | Precio del pack entre sus unidades; no es el precio por kg o litro. |
+| `precio_anterior_centimos` | Entero | No | Precio tachado. |
+| `precio_referencia_centimos` | Entero | No | Precio por unidad de referencia publicado por DIA. |
+| `unidad_precio_referencia` | Texto | No | KILO, LITRO, UNIDAD, LAVADO, DOCENA o METRO. |
+| `moneda` | Texto | Sí | Código de moneda (EUR). |
+| `es_promo` / `es_promo_club_dia` | Booleano | No | Tiene oferta general / Club DIA. |
+| `precio_promo_centimos` / `precio_club_centimos` | Entero | No | Precio marcado como promoción general / Club DIA. |
+| `tipo_promo` / `tipo_promo_club` | Texto | No | 2x1, 3x2, descuento_porcentaje, descuento_unidad, precio_fijo, precio_por_lote u otra. |
+| `descripcion_promo` / `descripcion_promo_club` | Texto | No | Condiciones originales de la oferta. |
+| `descuento_porcentaje` / `descuento_porcentaje_club` | Decimal | No | Porcentaje explícito de la oferta. |
+| `promociones` | Lista de objetos | No | Detalle de cada oferta (código, tipo, ámbito, unidades, importe…). |
+| `imagen_url` | Texto (URL) | No | URL absoluta de la imagen; ayuda a emparejar productos con otros supermercados. |
+| `supermercado` | Texto | Sí | Valor fijo `DIA`, para unir con otros supermercados. |
+| `origenes` | Lista de objetos | Sí | Procedencia en el RAW (ver Trazabilidad). |
 
-### Trazabilidad
+### 1.3. Transformaciones necesarias
 
-Cada elemento de `origenes` contiene `archivo`, relativo al proyecto, y `ruta_json`, por ejemplo `/categories/2/items/15`. Los índices empiezan en cero. Al consolidar productos se conservan todas sus apariciones originales.
+| Transformación | Origen → resultado | Motivo |
+|---|---|---|
+| Consolidar apariciones | Una fila por categoría → una por producto y captura | Cumplir la unidad de observación y la clave. |
+| Añadir fecha y procedencia | `captured_at`, archivo y posición → `fecha_captura`, `origenes` | Comparar capturas y localizar el registro original. |
+| Euros a céntimos | `prices.*` → `*_centimos` (enteros) | Evitar errores de redondeo. |
+| Limpiar la marca | `brand` → `marca` sin espacios y con mayúsculas unificadas | Que `Dr. Oetker` y `Dr. oetker` sean la misma marca. |
+| Normalizar unidades | `100 ML.` → LITRO y `100 GR.` → KILO (precio × 10) | Comparar precios de referencia en la misma unidad. |
+| Extraer el formato | `display_name` → contenido, unidad y envase | El contenido solo está en el nombre (`weight` vale 0). |
+| Interpretar promociones | `promotions` y flags de `prices` → campos de promoción | Separar ofertas generales y Club DIA. |
+| Completar la imagen | `image` relativa → `imagen_url` absoluta | Poder abrirla fuera de la web. |
+| Descartar campos vacíos | `weight`, `expiration_days`, `units_in_cart` | Valen 0 en todos los registros. |
 
 ## 2. Diagnóstico (Tarea 3.2)
 
