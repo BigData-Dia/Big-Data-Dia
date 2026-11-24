@@ -6,7 +6,7 @@
 Lee las capturas de data/raw/<captura>/productos_dia.json con pandas, sin
 modificarlas, y muestra por pantalla las comprobaciones de estructura y calidad.
 
-Uso: python scripts/3_diagnostico.py
+Uso: python scripts/2_diagnostico.py
 Requisitos: Python >= 3.10 y pandas.
 """
 

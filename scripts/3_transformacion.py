@@ -3,7 +3,7 @@
 
 """Transforma las capturas de DIA en data/processed/<captura>/productos_dia.json.
 
-Uso: python scripts/2_transformacion.py [ruta/productos_dia.json]
+Uso: python scripts/3_transformacion.py [ruta/productos_dia.json]
 Sin ruta, transforma todas las capturas de data/raw.
 """
 
