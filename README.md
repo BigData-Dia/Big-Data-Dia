@@ -116,16 +116,15 @@ El proyecto permitirá aplicar durante el curso diferentes técnicas de Big Data
 ## 9. Documentación del proyecto
 
 - [Recopilación y organización del dataset](docs/recopilacion.md)
-- [Preparación, diccionario de campos y ejecución](docs/preparacion.md)
-- [Diagnóstico de los datos](docs/diagnostico.md)
+- [Preparación: diseño, diagnóstico y transformación](docs/preparacion.md)
 
 ## 10. Organización del proyecto
 
 ```text
 scripts/
     1_ingesta.py
-    2_transformacion.py
-    3_diagnostico.py
+    2_diagnostico.py
+    3_transformacion.py
 
 data/
     raw/          Archivos originales JSON
