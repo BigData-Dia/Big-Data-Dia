@@ -1,67 +1,137 @@
-# Análisis de productos y precios de DIA
+# Análisis de productos y precios del supermercado DIA
 
-Dataset del catálogo online de DIA para estudiar precios, categorías, formatos y promociones entre capturas. Los originales y las salidas transformadas se conservan por separado.
+Recopilación y análisis de datos del catálogo online de DIA para estudiar la evolución de los precios, los formatos de los productos y las promociones entre diferentes capturas.
 
-## Documentación
+## 1. Fuente
 
-- [Recopilación y organización del dataset](docs/recopilacion.md)
-- [Preparación, diccionario de campos y ejecución](docs/preparacion.md)
-- [Diagnóstico histórico del 10 y 16 de noviembre](docs/diagnostico.md)
+- **Entidad:** Supermercados DIA.
+- **Web oficial:** [https://www.dia.es/](https://www.dia.es/)
+- **Origen de los datos:** Catálogo de productos de la tienda online de DIA.
+- **Método de obtención:** Recopilación automatizada mediante consultas a los servicios utilizados por la tienda online.
+- **Fecha de consulta:** 10/11/2026 y 23/11/2026.
 
-## Organización del proyecto
+Los datos proceden del catálogo online español de DIA. Se conservan los archivos originales obtenidos en cada captura y se generan archivos JSON transformados para facilitar su análisis.
 
-```text
-scripts/1_ingesta.py         Obtención de una nueva captura
-scripts/2_transformacion.py  Transformación de los originales
-scripts/promociones.py       Interpretación de promociones
-scripts/3_diagnostico.py     Diagnóstico con pandas
-tests/test_promociones.py   Pruebas de promociones
-data/raw/<captura>/          Originales JSON
-data/processed/<captura>/    Productos transformados en JSON
-docs/                       Documentación de las tareas
-```
+## 2. Registros y campos
 
-## Dataset actual
+Cada registro del dataset procesado representa un producto en una captura determinada. Un mismo producto puede aparecer en varias categorías del catálogo.
 
-Cada registro procesado representa un producto en una captura. `producto_id` identifica el producto dentro del archivo; se combina con `captured_at` al construir un histórico. La salida incluye categorías, nombre, marca, imagen, precios en céntimos, contenido y tamaño de los packs, promociones generales y Club DIA, condiciones originales y procedencias.
+Los principales campos utilizados son:
 
-El [diccionario de preparación](docs/preparacion.md) define los campos y las diferencias entre precio del pack, precio individual y precio por unidad de referencia. Los valores desconocidos se mantienen como `null`. El formato implementado es JSON; la exportación a Parquet está pendiente.
+| Campo | Descripción |
+|---|---|
+| `producto_id` | Identificador del producto utilizado para reconocerlo entre capturas. |
+| `nombre` | Nombre comercial del producto. |
+| `marca` | Marca comercial del producto, cuando está disponible. |
+| `categoria` | Categorías del catálogo en las que aparece el producto. |
+| `precio` | Precio publicado del producto o del pack. |
+| `precio_unidad` | Precio por unidad de referencia, por ejemplo, por kilogramo o litro, expresado en céntimos. |
+| `promociones` | Información sobre las promociones asociadas al producto. |
+
+El diccionario completo de campos, sus tipos y las transformaciones aplicadas se encuentra en [docs/preparacion.md](docs/preparacion.md).
+
+## 3. Formato y tamaño
+
+- **Formato original:** JSON.
+- **Formato procesado:** JSON.
+- **Tamaño de los archivos:** Pendiente de determinar.
+- **Ámbito de recopilación:** Catálogo online de DIA.
+- **Conjunto de datos:** Se trabaja con las capturas disponibles, conservando los datos originales y sus correspondientes transformaciones.
 
 ### Capturas disponibles
 
-Inventario consultado el 23 de noviembre de 2026. Los recuentos RAW corresponden a apariciones producto-categoría; los productos únicos se cuentan por identificador.
+Inventario consultado el 23 de noviembre de 2026.
 
-| Captura | Apariciones RAW | Productos únicos | `complete` RAW | JSON procesado |
-|---|---:|---:|---|---|
-| `20261110T194612.279326Z` | 7,233 | 5,755 | `false` | Disponible |
-| `20261116T181331.483679Z` | 7,215 | 5,738 | `false` | Disponible |
-| `20261123T184952.650445Z` | 7,267 | 5,750 | `false` | Pendiente |
+| Fecha de captura | Apariciones RAW | Productos únicos | JSON procesado |
+|---|---:|---:|---|
+| 10/11/2026 | 7.233 | 5.755 | Disponible |
+| 23/11/2026 | 7.267 | 5.750 | Pendiente |
 
-Una captura disponible no implica cobertura completa ni un diagnóstico actualizado. El informe histórico solo cubre las dos capturas que identifica expresamente.
+Las apariciones RAW representan registros producto-categoría. Por tanto, un mismo producto puede aparecer varias veces si pertenece a diferentes categorías.
 
-## Ejecución
+Las capturas no tienen cobertura completa del catálogo, por lo que los resultados deben interpretarse teniendo en cuenta esta limitación.
 
-Python 3.10 o superior. Desde la raíz del proyecto:
+## 4. Cobertura
 
-```bash
-python -m pip install requests pandas
-python scripts/3_diagnostico.py
-python scripts/2_transformacion.py
+- **Ámbito geográfico:** España.
+- **Fuente:** Catálogo online español de DIA.
+- **Periodo de observación:** Del 10 y 23 de noviembre de 2026.
+- **Fechas de captura disponibles:** 10 y 23 de noviembre de 2026.
+
+Las fechas corresponden a los momentos en los que se recopilaron los datos, no a las fechas de inicio o finalización de las promociones.
+
+No se ha confirmado un código postal o un surtido concreto. Los productos, precios y disponibilidad pueden variar según la ubicación y las condiciones de la tienda online.
+
+## 5. Condiciones de uso
+
+Los datos proceden de la web oficial de DIA. Está pendiente revisar y documentar las condiciones específicas de extracción automatizada, reutilización y redistribución de la información.
+
+No se utilizarán métodos para eludir sistemas de protección o restricciones de acceso.
+
+Hasta confirmar las condiciones aplicables, no se considera verificado que los archivos puedan compartirse o redistribuirse libremente.
+
+## 6. Preguntas de investigación
+
+El proyecto pretende responder a las siguientes preguntas:
+
+1. ¿Cómo cambia el precio de los productos que aparecen en varias capturas?
+2. ¿Qué categorías y marcas tienen una mayor variedad de productos?
+3. ¿Qué promociones generales y del Club DIA aparecen en las distintas categorías?
+4. ¿Qué diferencias existen entre el precio del pack, el precio por unidad y el precio de referencia?
+5. ¿Qué productos presentan cambios de precio entre las capturas disponibles?
+
+Estas preguntas permiten estudiar tanto la evolución temporal de los precios como las características del catálogo y sus promociones.
+
+## 7. Limitación inicial
+
+La principal limitación detectada es que las capturas no contienen la totalidad del catálogo. Además, algunos productos pueden aparecer en varias categorías y existen diferencias entre los datos de stock de distintas apariciones.
+
+También se han detectado discrepancias en algunos precios de referencia respecto al contenido indicado en el nombre del producto. Estos casos deben revisarse antes de realizar comparaciones.
+
+Por otra parte, el número de capturas disponibles todavía es reducido, por lo que no permite establecer tendencias de precios a largo plazo.
+
+## 8. Motivo de elección
+
+Se ha elegido este dataset porque permite trabajar con datos reales de un sector cercano a la vida cotidiana: la distribución alimentaria.
+
+Además de estudiar la evolución de los precios, los formatos, las categorías y las promociones de DIA, el proyecto tiene como objetivo facilitar una posible comparación con los datasets de otros grupos de clase, que están recopilando información de otros supermercados.
+
+Este trabajo conjunto permitirá analizar semejanzas y diferencias entre supermercados, por ejemplo, en los precios de productos equivalentes, la variedad de marcas, las categorías disponibles y las estrategias de promoción.
+
+Para ello, será necesario identificar qué campos e información pueden utilizarse de forma común entre los distintos datasets, teniendo en cuenta que cada supermercado puede presentar sus propios formatos, identificadores y condiciones comerciales.
+
+El proyecto permitirá aplicar durante el curso diferentes técnicas de Big Data e inteligencia artificial:
+
+- Recopilación automatizada de datos.
+- Python y tratamiento de archivos JSON.
+- Limpieza y transformación de datos.
+- Análisis exploratorio de datos (EDA).
+- Comparación temporal de precios.
+- Análisis de categorías, formatos y promociones.
+- Integración y comparación de datos procedentes de diferentes supermercados.
+- Almacenamiento y visualización de resultados.
+
+---
+
+## 9. Documentación del proyecto
+
+- [Recopilación y organización del dataset](docs/recopilacion.md)
+- [Preparación, diccionario de campos y ejecución](docs/preparacion.md)
+- [Diagnóstico de los datos](docs/diagnostico.md)
+
+## 10. Organización del proyecto
+
+```text
+scripts/
+    1_ingesta.py
+    2_transformacion.py
+    3_diagnostico.py
+
+data/
+    raw/          Archivos originales JSON
+    processed/    Archivos JSON transformados
+
+docs/
+    recopilacion.md
+    preparacion.md
 ```
-
-Para obtener una nueva captura, ejecutar `python scripts/1_ingesta.py`. Este paso consulta DIA; el diagnóstico y la transformación trabajan sobre archivos locales. Las instrucciones de pruebas están en [Preparación](docs/preparacion.md).
-
-## Preguntas de investigación
-
-1. ¿Cómo cambia el precio de los productos comunes entre capturas?
-2. ¿Qué categorías y marcas tienen más variedad?
-3. ¿Qué promociones generales y del Club DIA aparecen por categoría?
-4. ¿Cómo influyen el tamaño del pack y la unidad de referencia en la comparación?
-
-## Cobertura y limitaciones
-
-La fuente es el catálogo online español de DIA. La fecha de observación se conserva en `captured_at`; no representa la fecha de inicio de una promoción. No se ha confirmado un surtido o código postal concreto. La cobertura incompleta, el stock y las condiciones Club limitan las comparaciones. Los identificadores de DIA no permiten equiparar automáticamente productos de otros supermercados.
-
-## Condiciones de uso
-
-Está pendiente revisar las condiciones de extracción, reutilización y redistribución de la fuente. El proyecto conserva los datos originales y documenta las limitaciones observadas.
