@@ -61,29 +61,26 @@ Los campos opcionales quedan nulos cuando el dato no está disponible o no se re
 | Completar la imagen | `image` relativa → `imagen_url` absoluta | Poder abrirla fuera de la web. |
 | Descartar campos vacíos | `weight`, `expiration_days`, `units_in_cart` | Valen 0 en todos los registros. |
 
-## 2. Diagnóstico (Tarea 3.2)
 
-El [informe de diagnóstico](diagnostico.md) conserva las cifras del 10 y 16 de noviembre. El código está en [3_diagnostico.py](../scripts/3_diagnostico.py). Una captura nueva exige volver a ejecutar el diagnóstico antes de extender esas conclusiones.
+## 2. Diagnosticar (Tarea 3.2)
 
-### Comprobaciones, resultados y conclusiones
+Se ha ejecutado el script de diagnóstico (`scripts/fase_3.2_diagnostico.py`) directamente sobre los archivos JSON originales de ambas capturas en `data/raw/` (`20261110T194612.279326Z/` y `20261123T184952.650445Z/`) sin modificarlos.
 
-Resumen de las cifras obtenidas con pandas y documentadas en el informe de diagnóstico. **Alcance: capturas del 10 y 16 de noviembre de 2026; no incluye la del 23 de noviembre.** Una fila del diagnóstico representa una aparición producto-categoría. La lectura, la inspección de tipos y los primeros registros se realizan sobre los RAW, sin modificarlos.
+### 2.1. Resumen de comprobaciones con `pandas`
 
-| Comprobación | Resultado | Conclusión |
-|---|---|---|
-| Estructura, tipos y muestra | 14.448 filas y 33 columnas: 7.233 filas del 10/11 y 7.215 del 16/11. Identificadores como texto, precios `float64` y fecha de captura UTC. El script muestra los primeros registros con `head()`. | Hay objetos y listas anidados que deben interpretarse antes de construir la salida. |
-| Valores ausentes | Marca ausente en 407 filas (2,8 %); sin ausencias en `object_id` ni `display_name`. | La marca requiere admitir valores desconocidos. La ausencia de información opcional no demuestra que no exista en la realidad. |
-| Filas repetidas | 0 filas completamente idénticas; 2.919 iguales si se excluye la categoría. | La presencia en varias categorías explica repeticiones de productos; no deben eliminarse categorías sin conservar su relación. |
-| Claves del diseño | `object_id` repetido 1.478 veces el 10/11 y 1.477 el 16/11: 5.755 y 5.738 productos únicos. Hay 11.493 pares únicos `(producto_id, captured_at)`; 0 repeticiones de `(producto_id, categoría)` dentro de cada captura. | La clave de salida no es única en el RAW por aparición. Debe consolidarse por producto dentro de cada captura, conservando categorías y procedencias. |
-| Categorías, unidades y formatos | 30 categorías, 8 unidades de precio de referencia y solo moneda EUR. Hay 204 marcas con espacios en los extremos. | Los formatos de marca y las unidades necesitan normalización justificada; los precios por distintas unidades no son directamente comparables. |
-| Rangos y coherencia de precios | Precio entre 0,15 y 69,00 €, sin ceros ni negativos; descuentos entre 0 y 40 %. Hay 16 discrepancias superiores al 20 % entre contenido del nombre y precio por unidad, correspondientes a 8 productos. | Ajax 1,2 L presenta una incoherencia interna confirmada: 2.241,67 €/L frente a unos 2,24 €/L calculados con 2,69 €/1,2 L. Los otros 7 productos requieren investigación; no se corrigen automáticamente. |
-| Consistencia entre apariciones | Nombre, marca y precios coinciden para cada producto y captura; el stock difiere en 35 casos. | Las diferencias de stock necesitan revisión antes de consolidar ese campo. |
-| Cobertura y comparación temporal | 2 fechas; 28 de 30 categorías completas en cada captura. Hay 5.705 productos comunes, 50 solo en la primera y 33 solo en la segunda. Cambian de precio 524 productos comunes (282 suben y 242 bajan). | La cobertura es incompleta: no se pueden interpretar las apariciones y desapariciones como altas o bajas reales ni deducir tendencias con dos fechas. |
+| Dimensión / Aspecto | Comprobación realizada | Resultado obtenido | Conclusión |
+|---|---|---|---|
+| **Estructura y volumen** | Filas, columnas y tipos leídos tras aplanar los JSON (`json_normalize`). | `[N]` apariciones totales en `[N]` columnas (`[N]` en 10/11/2026 y `[N]` en 23/11/2026). Precios como `float64` y textos/IDs como `object`. | Estructura consistente entre ambas capturas; cada fila representa una aparición en categoría. |
+| **Unicidad y clave candidata** | Duplicados exactos y repeticiones de `object_id + fecha_captura`. | `0` filas 100% idénticas, pero **`[N]` repeticiones** de `object_id` dentro de una misma captura (`[N]` únicos en 10/11 y `[N]` en 23/11). | **Error/comportamiento confirmado:** la clave no es única en el RAW porque un producto aparece en varias categorías; requiere consolidación. |
+| **Completitud (ausencias)** | Recuento de nulos en campos clave (`brand`, `prices.price`, `promotions`, `image`). | `brand` ausente en `[N]` registros (`[N]%`); `prices.price` ausente en `[N]` registros. | `brand` nulo es normal en frescos a granel. Si hay precios nulos, deben investigarse o apartarse. |
+| **Validez de formatos y marcas** | Variantes en `brand`, unidades en `prices.measure_unit` y columnas constantes (`weight`, `expiration_days`, `units_in_cart`). | `[N]` variantes de escritura en `brand` (espacios/mayúsculas); unidades como `100 ML.` y `100 GR.` mezcladas con `LITRO` y `KILO`; `weight`, `expiration_days` y `units_in_cart` valen siempre `0`. | **Confirmado:** justifica normalizar marcas, escalar unidades a `LITRO`/`KILO` y descartar las columnas constantes a `0`. |
+| **Rangos y stock** | Distribución de `prices.price` y registros con `units_in_stock == 0`. | Precios entre `[min] €` y `[max] €` (mediana `[med] €`). Detectados `[N]` registros con `units_in_stock == 0`. | **Caso a investigar:** comprobar si los productos con stock `0` tienen precios válidos antes de incluirlos en comparativas entre fechas. |
+| **Cobertura temporal** | Rango de `captured_at` entre capturas. | Desde `2026-11-10T19:46:12Z` hasta `2026-11-23T18:49:52Z` (2 capturas separadas por 13 días). | Cobertura adecuada para analizar variaciones quincenales de precios y promociones. |
 
-### Principales problemas y dudas
+### 2.2. Síntesis de problemas confirmados y casos a investigar
 
-1. **Incoherencia confirmada:** el precio por litro de Ajax no concuerda con su precio y contenido declarado; el valor real requiere contrastar la fuente. Otros 7 productos con discrepancias necesitan investigación.
-2. **Limitación confirmada de la clave RAW:** el identificador se repite por pertenecer a varias categorías. La salida prevista exige consolidar por producto y captura y conservar todas las procedencias.
-3. **Cobertura pendiente de aclarar:** dos categorías figuran incompletas en ambas capturas. Las 50 desapariciones y 33 apariciones pueden deberse a diferencias de captura, no necesariamente a cambios reales del catálogo.
-
-[Recopilación](recopilacion.md) · [Diagnóstico](diagnostico.md) · [Inicio](../README.md)
+* **Problemas confirmados:**
+  1. **Colisión de la clave candidata en el RAW (`[N]` repeticiones):** al estar los datos organizados por categoría, un mismo `object_id` aparece repetido hasta `[N]` veces en la misma captura (por ejemplo, en *Frutas* y *Novedades*), confirmando la necesidad de agrupar por `producto_id + fecha_captura` y consolidar `categorias` y `origenes` en listas.
+  2. **Inconsistencia en unidades de referencia y marcas:** `prices.measure_unit` combina escalas base (`KILO`, `LITRO`) con fracciones (`100 GR.`, `100 ML.`), y `brand` presenta `[N]` duplicados por diferencias de mayúsculas o espacios. Además, el peso del producto no está en `weight` (siempre `0`), sino incrustado en `display_name`.
+* **Casos que necesitan investigación:**
+  1. **Artículos con `units_in_stock == 0` (`[N]` apariciones) y sufijos de pack (`[N]` registros):** es necesario verificar en la transformación si los artículos sin stock mantienen actualizado su precio o conservan precios antiguos, así como comprobar qué productos con sufijo de pack (ej. `504P6`) carecen de su producto individual base en la misma captura.
